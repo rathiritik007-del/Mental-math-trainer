@@ -1282,13 +1282,31 @@ onSessionComplete = function(pct, sessionBestStreak, score, total) {
       saveXPData(data);
       setTimeout(() => showXPFloat(bonus, false), 1200);
     }
+    const xpGained = Math.max(0, getXPData().totalXP - _sessionStartXP);
+    const pbXPEl = document.getElementById('pbXP');
+    if (pbXPEl) pbXPEl.textContent = '+' + xpGained + ' XP';
+    saveSessionSummary(pct, score, total, xpGained, sessionBestStreak);
+    try {
+      const history = JSON.parse(localStorage.getItem('quiz_history')) || [];
+      if (history[0]) {
+        history[0].xp = xpGained;
+        localStorage.setItem('quiz_history', JSON.stringify(history));
+        saveSessionToSupabase?.(history[0]);
+      }
+    } catch(e) {}
+    window._wasDailyChallenge = false;
   }
 };
 
 // Track DC start so bonus fires correctly
 const _origStartDC = startDailyChallenge;
 startDailyChallenge = function() {
-  window._wasDailyChallenge = true;
+  if (isDailyChallengeCompleted()) {
+    window._wasDailyChallenge = false;
+  } else {
+    onSessionStartHook();
+    window._wasDailyChallenge = true;
+  }
   _origStartDC();
 };
 
